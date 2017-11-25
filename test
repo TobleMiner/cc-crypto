@@ -1,0 +1,22 @@
+os.loadAPI("util/include")
+
+local aeslua = require("/lib/aeslua.lua")
+local hmac = require("/lib/sha1.lua").hmac
+
+print("Initialized")
+
+local clearText = "Hello World! My friend! This are multiple blocks!"
+
+local passwd = "helloasdfworld"
+
+local cipherText = aeslua.encrypt(passwd, clearText, aeslua.AES128, aeslua.CBCMODE)
+local txHmac = hmac(passwd, cipherText)
+
+print(#cipherText)
+
+local probablySameHmac = hmac(passwd, cipherText)
+local hopefullyClearText = aeslua.decrypt(passwd, cipherText, aeslua.AES128, aeslua.CBCMODE)
+
+print("HMAC ok: "..tostring(txHmac == probablySameHmac))
+
+print(hopefullyClearText)
