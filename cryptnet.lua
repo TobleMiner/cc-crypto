@@ -78,20 +78,16 @@ local Cryptnet = util.class()
 				hmac: hmac of all other paramters + current challenge
 ]]
 
-function Cryptnet:init(side, keyStore, proto)
+function Cryptnet:init(side, keyStore)
 	local modem = peripheral.wrap(side)
 	local logger_str = 'CRYPTNET ' .. side
-	if proto then
-		logger_str = logger_str .. ' (' .. proto .. ')' 
-	end
 	
 	self.side = side
 	self.ownId = os.getComputerID()
-	self.keyStore = keystore
+	self.keyStore = keyStore
 	self.sessionManger = SessionManger.new(self)
 	self.logger = Logger.new(logger_str, DEBUG_LEVEL)
 	self.modem = modem
-	self.proto = proto
 end
 
 function Cryptnet:sendMessage(msg, chan)

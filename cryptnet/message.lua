@@ -34,7 +34,7 @@ end
 
 function Message.parse(cryptnet, msg)
 	if not util.table_has(msg, Message.getParams()) then
-		cryptnet.getLogger().error('Failed to parse packet, missing keys')
+		cryptnet:getLogger():error('Failed to parse packet, missing keys')
 	end
 	
 	local msgType = msg.type
@@ -42,12 +42,12 @@ function Message.parse(cryptnet, msg)
 		return Message.typeMap[msgType]:fromMsg(cryptnet, msg)
 	end
 
-	cryptnet.getLogger().warn('Received message with unknown type')
+	cryptnet:getLogger():warn('Received message with unknown type')
 end
 
 function Message.fromMsg(clazz, cryptnet, msg)
 	if not util.table_has(msg, clazz.getParams()) then
-			cryptnet.getLogger().error('Failed to parse message, missing keys')
+		cryptnet:getLogger():error('Failed to parse message, missing keys')
 	end
 
 	local message = clazz.new()
@@ -85,13 +85,14 @@ function Message:copyParams(msg)
 	end
 end
 
-function Message:hmac(key, challenge)
+function Message:calcHmac(key, challenge)
+	vardump(challenge)
 	local strHmac = self:strHmac() .. tostring(challenge:get())
 	return sha1.hmac(key:getKey(), strHmac)
 end
 
-function Message:validate(key, challenge)
-	local expected = self:hmac(key:getKey(), tostring(challenge:get()))
+function Message:verify(key, challenge)
+	local expected = self:calcHmac(key, challenge)
 	local actual = self:getHmac()
 	return expected == actual
 end
@@ -139,16 +140,16 @@ function MessageAssoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'keyid', 'challenge'}
 end
 
-function MessageAssoc.getType()
-	return Message.type.ASSOC_RESP
-end
-
 function MessageAssoc:isAuthenticated()
 	return false
 end
 
 
 
+
+function MessageAssocResponse.getType()
+	return Message.type.ASSOC_RESP
+end
 
 function MessageAssocResponse.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'challenge', 'hmac'}
@@ -196,7 +197,7 @@ function MessageDataResponse:strHmac()
 	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.success) .. tostring(self.challenge)
 end
 
-function Message:hmac(key)
+function MessageDataResponse:calcHmac(key)
 	local strHmac = self:strHmac()
 	return sha1.hmac(key:getKey(), strHmac)
 end

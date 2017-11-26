@@ -123,17 +123,12 @@ function SessionManager:associateSession(msg, resp_chan)
 		return nil
 	end
 	
-	session:setRemoteId(msg:getId_a())
-	
-	session:getChallengeTx():set(msg:getChallenge())
-	session:getChallengeRx():set(self.random:uint32())
-	
 	return session
 end
 
 function SessionManager:handleMessage(msg, resp_chan)
 	local session = self:getSession(msg:getLocalId())
-	if msg.isa(MessageAssoc) then
+	if msg:getType() == MessageAssoc.getType() then
 		self.logger:debug('Got association request, setting up new session')
 		session = self:associateSession(msg, resp_chan)
 	end
@@ -263,7 +258,7 @@ function Session:notify()
 		local data = MessageData.new()
 		self:setTxIds(data)
 		data:encrypt(message)
-		data:setHmac(data:hmac(self:getKey(), self:getChallengeTx()))
+		data:setHmac(data:calcHmac(self:getKey(), self:getChallengeTx()))
 		
 		-- Kill unresponsive sessions
 		self:resetTerminationTimeout()
@@ -280,16 +275,20 @@ end
 -- RX message handling
 ----------------------
 function Session:isMessageSane(msg)
-	if msg:getLocalId() ~= self:getLocalId() then
-		self.logger:warn('Local id of message does not match local session id')
-		return false
-	end
-
-	if msg:getRemoteId() ~= self:getRemoteId() then
-		self.logger:warn('Remote id of message does not match remote session id')
-		return false
+	if self.state > Session.state.ASSOCIATE then -- TODO: Define closer constraint
+		if msg:getLocalId() ~= self:getLocalId() then
+			self.logger:warn('Local id of message does not match local session id')
+			return false
+		end
 	end
 	
+	if self.state > Session.state.ASSOCIATE then -- TODO: Define closer constraint		
+		if msg:getRemoteId() ~= self:getRemoteId() then
+			self.logger:warn('Remote id of message does not match remote session id')
+			return false
+		end
+	end
+		
 	if msg:getId_recipient() ~= self.manager:getCryptnet():getOwnId() then
 		self.logger:warn('Recipient id does not match our own id')
 		return false
@@ -304,12 +303,13 @@ function Session:isMessageSane(msg)
 end
 
 function Session:handleMessage(msg)
-	if not self:isMessageSane() then
+	if not self:isMessageSane(msg) then
 		self.logger:warn('Message does not seem to be sane, discarding message')
 		return
 	end
 	
 	if msg:isAuthenticated() then
+		vardump(self:getChallengeRx())
 		if not msg:verify(self:getKey(), self:getChallengeRx()) then
 			self.logger:warn('Message verification failed, discarding message')
 			-- TODO: implement path for verification failures
@@ -322,20 +322,20 @@ function Session:handleMessage(msg)
 	local response = nil
 	local handled = false
 	
-	if msg:isa(MessageAssoc) then
-		response = session:handleAssoc(msg)
+	if msg:getType() == MessageAssoc.getType() then
+		response = self:handleAssoc(msg)
 		handled = true
-	elseif msg:isa(MessageAssocResponse) then
+	elseif msg:getType() == MessageAssocResponse.getType() then
 		self:handleAssocResponse(msg)
 		handled = true
-	elseif msg:isa(MessageData) then
+	elseif msg:getType() == MessageData.getType() then
 		response = self:handleData(msg)
 		handled = true
-	elseif msg:isa(MessageDataResponse) then
+	elseif msg:getType() == MessageDataResponse.getType() then
 		-- TODO: Maybe implement resend via handleDataResponse return value?
 		self:handleDataResponse(msg)
 		handled = true
-	elseif msg:isa(MessageDeassoc) then
+	elseif msg:getType() == MessageDeassoc.getType() then
 		self:handleDeassoc(msg)
 		handled = true
 	else
@@ -348,7 +348,8 @@ function Session:handleMessage(msg)
 	
 	if response then
 		if response:isAuthenticated() then
-			response:setHmac(response:hmac(self:getKey(), self:getChallengeTx()))
+			vardump(self:getChallengeTx())
+			response:setHmac(response:calcHmac(self:getKey(), self:getChallengeTx()))
 		end
 		self.manager:getCryptnet():sendMessage(response:toTable(), self.peerMac)
 		self:getChallengeTx():inc()
@@ -360,14 +361,18 @@ function Session:handleMessage(msg)
 end
 
 function Session:handleAssoc(msg)
-	if self.state ~= Session.state.ASSOCIATE then
+	if self.state ~= Session.state.IDLE then
 		self.logger:warn('Received association in invalid state '..tostring(self.state))
 		return
 	end
-	
-	local assocResp = MessageAssocResponse.new()
+		
+	self:setRemoteId(msg:getRemoteId())
+	self:getChallengeTx():set(msg:getChallenge())
+	session:getChallengeRx():set(self.manager.random:uint32())
 
-	session:setTxIds(assocResp)
+	local assocResp = MessageAssocResponse.new()
+	
+	self:setTxIds(assocResp)
 	assocResp:setChallenge(self:getChallengeRx():get())
 
 	-- "Handshake" complete (although everything might have gone wrong)
@@ -385,6 +390,8 @@ function Session:handleAssocResponse(msg)
 		return
 	end
 
+	vardump(self:getChallengeTx())
+	
 	self:getChallengeTx():set(msg:getChallenge())
 
 	-- "Handshake" complete (although everything might have gone wrong)
@@ -406,7 +413,7 @@ function Session:handleData(msg)
 
 	local dataResp = MessageDataResponse.new()
 
-	session:setTxIds(dataResp)
+	self:setTxIds(dataResp)
 	-- Special challenge reset function; Only nedded for verification failure path
 	-- dataResp:setChallenge(self:getChallengeRx():get())
 	dataResp:setSuccess(true)
@@ -481,7 +488,7 @@ function Session:getRemoteId()
 	return self.idRemote
 end
 
-function Session:setRemoteId(id_remote)
+function Session:setRemoteId(idRemote)
 	self.idRemote = idRemote
 end
 
