@@ -1,6 +1,6 @@
 os.loadAPI('util/include')
 
-Message, MessageAssoc = require('lib/cryptnet/message.lua')
+--[[Message, MessageAssoc = require('lib/cryptnet/message.lua')
 
 msg = {type = Message.type.DEASSOC, id = 42, id_recipient = 23, id_a = 0, id_b = 42, keyid = 0, challenge = 'asdfasda', hmac = 'hitler'}
 
@@ -23,7 +23,7 @@ end
 
 printTable(message)
 
---[[
+
 os.loadAPI('parallel')
 
 local TimerManger = require('lib/timer.lua')
@@ -41,4 +41,61 @@ end
 
 parallel.waitForAll(function() manager:run() end, doStuff)
 
+
+
+local Queue = require('lib/queue.lua')
+
+local queue = Queue.new()
+
+queue:enqueue(42)
+queue:enqueue(1337)
+queue:enqueue(4243)
+
+print(queue:size())
+
+queue:dequeue()
+queue:dequeue()
+queue:dequeue()
+
+print(#queue)
+
 ]]
+
+_G['vardump'] = function(var, prefix)
+	if not prefix then
+		prefix = ''
+	end
+	
+	if type(var) == 'table' then
+		for k,v in pairs(var) do
+			print(prefix .. k .. ':')
+			if type(v) == 'table' then
+				vardump(v, prefix .. '\t')
+			else
+				print(prefix .. '\t' .. tostring(v))
+			end
+		end
+	else
+		print(prefix .. '\t' .. tostring(var))
+	end
+end
+
+local KeyStore, Key = require('lib/cryptnet/key.lua')
+local Cryptnet = require('lib/cryptnet.lua')
+
+local keyStore = KeyStore.new()
+local key = Key.new('superSecretSecretKey')
+keyStore:addKey(key)
+
+local cryptnet = Cryptnet.new('back', keyStore)
+
+os.loadAPI('parallel')
+
+parallel.waitForAll(
+	function() cryptnet:run() end,
+	function() cryptnet:send('Hello World', 0, key) end
+	)
+
+
+
+

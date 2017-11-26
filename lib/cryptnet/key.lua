@@ -1,5 +1,5 @@
 local util = require('lib/util.lua')
-local md5 = require('lib/md5.lua')
+local sha1 = require('lib/sha1.lua')
 local Logger = require('lib/logger.lua')
 
 local KeyStore = util.class()
@@ -10,12 +10,11 @@ function KeyStore:init()
 	self.keys = {}
 end
 
-function KeyStore:addKey(key, ...)
-	local key = Key.new(key, ...)
-	if util.table_has(self.keys, key.getId()) then
+function KeyStore:addKey(key)
+	if util.table_has(self.keys, key:getId()) then
 		self.logger.warn('Duplicate key id '..key)
 	end
-	self.keys[key.getId()] = key
+	self.keys[key:getId()] = key
 end
 
 function KeyStore:getKey(keyId)
@@ -24,7 +23,7 @@ end
 
 function Key:init(key, ...)
 	self.key = key
-	self.id = md5.sumhexa(key)
+	self.id = sha1(key)
 	self.validIds = {}
 	for _,v in ipairs(table.pack(...)) do
 		self.validIds[v] = true
@@ -46,4 +45,4 @@ function Key:validFor(id)
 	return util.table_has(self.validIds, id)
 end
 
-return KeyStore
+return KeyStore, Key

@@ -1,4 +1,6 @@
 _G['require'] = function(fname)
+	print("=> Loading "..fname)
 	local f = assert(loadfile(fname))
+	print("<= "..fname.." loaded")
 	return f()
 end

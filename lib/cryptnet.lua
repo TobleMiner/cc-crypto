@@ -1,18 +1,14 @@
-if(type(require) ~= 'function') then
-	os.loadAPI("util/include")
-end
+os.loadAPI("util/include")
+os.loadAPI("parallel")
 
-local aeslua = require('lib/aeslua.lua')
-local sha1 = require('lib/sha1.lua')
-local md5 = require('lib/md5.lua')
 local util = require('lib/util.lua')
-local logger = require('lib/logger.lua')
+local Logger = require('lib/logger.lua')
 
 local SessionManger = require('lib/cryptnet/session.lua')
 
 local Message = require('lib/cryptnet/message.lua')
 
-local DEBUG_LEVEL = logger.DEBUG
+local DEBUG_LEVEL = Logger.DEBUG
 
 local Cryptnet = util.class()
 
@@ -84,11 +80,12 @@ local Cryptnet = util.class()
 
 function Cryptnet:init(side, keyStore, proto)
 	local modem = peripheral.wrap(side)
-	local logger_str = 'CRYPTNET ' .. side;
+	local logger_str = 'CRYPTNET ' .. side
 	if proto then
 		logger_str = logger_str .. ' (' .. proto .. ')' 
 	end
 	
+	self.side = side
 	self.ownId = os.getComputerID()
 	self.keyStore = keystore
 	self.sessionManger = SessionManger.new(self)
@@ -102,21 +99,34 @@ function Cryptnet:sendMessage(msg, chan)
 end
 
 function Cryptnet:run()
+	parallel.waitForAll(
+		function() self:listen() end,
+		function() self.sessionManger:run() end)
+end
+
+function Cryptnet:listen()
 	if not self.modem.isOpen(self.ownId) then
 		self.modem.open(self.ownId)	
 	end
 	
+	self.logger:debug('Listening...')
 	while true do
 		local event, side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
+		self.logger:debug('Got message')
 		if side == self.side and chan == self.ownId then
+			self.logger:debug('Got valid message')
 			local message = Message.parse(self, msg)
 			if message then
 				self.sessionManger:handleMessage(message, resp_chan)
 			end
 		else
-			os.queueEvent(event, side, chan, resp_chan, msg, dist)
+			--os.queueEvent(event, side, chan, resp_chan, msg, dist)
 		end
 	end
+end
+
+function Cryptnet:send(msg, recipient, key)
+	self.sessionManger:enqueueMessage(msg, recipient, key)
 end
 
 function Cryptnet:getOwnId()
