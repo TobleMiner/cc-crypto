@@ -1,5 +1,8 @@
 local util = require('lib/util.lua')
 
+local sha1 = require('lib/sha1.lua')
+local aeslua = require("/lib/aeslua.lua")
+
 local Message = util.class()
 local MessageAssoc = util.class(Message)
 local MessageAssocResponse = util.class(Message)
@@ -59,8 +62,23 @@ function Message:copyParams(msg)
 	end
 end
 
+function Message:hmac(key, challenge)
+	local strHmac = self:strHmac() .. challenge
+	return sha1.hmac(key:getKey(), strHmac)
+end
+
+function Message:validate(key, challenge)
+	local expected = self:hmac(key, challenge)
+	local actual = self:getHmac()
+	return expected == actual
+end
+
 function Message:getLocalId()
 	return self.isTx and self.id_a or self.id_b
+end
+
+function Message:getHmac()
+	return self.hmac
 end
 
 
@@ -68,12 +86,17 @@ function MessageAssoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'keyid', 'challenge'}
 end
 
-function MessageAssoc:handle(cryptnet)
-
+function MessageAssoc:getChallenge()
+	return self.challenge
 end
+
 
 function MessageAssocResponse.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'challenge', 'hmac'}
+end
+
+function MessageAssocResponse:strHmac()
+	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.challenge) 
 end
 
 
@@ -81,14 +104,34 @@ function MessageData.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'data'}
 end
 
+function MessageData:strHmac()
+	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.data) 
+end
+
+function MessageData:encrypt(key, data)
+	self.data = aeslua.encrypt(key.getKey(), data, aeslua.AES128, aeslua.CBCMODE)
+end
+
+function MessageData:decrypt(key)
+	return aeslua.decrypt(key.getKey(), self.data, aeslua.AES128, aeslua.CBCMODE)
+end
+
 
 function MessageDataResponse.getParams()
-	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'data', 'success', 'challenge'}
+	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'success', 'challenge'}
+end
+
+function MessageData:strHmac()
+	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.success) .. tostring(self.challenge)
 end
 
 
 function MessageDeassoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac'}
+end
+
+function MessageData:strHmac()
+	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b)
 end
 
 return Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc

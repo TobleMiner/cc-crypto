@@ -9,7 +9,8 @@ local util = require('lib/util.lua')
 local Logger = require('lib/logger.lua')
 local Timer = require('lib/timer.lua')
 local Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc = require('lib/cryptnet/message.lua')
-local Challenge =  require('lib/cryptnet/challenge.lua')
+local Challenge = require('lib/cryptnet/challenge.lua')
+local Random = require('lib/random.lua')
 
 local SessionManager = util.class()
 local Session = util.class()
@@ -25,6 +26,7 @@ function SessionManager:init(cryptnet)
 	self.sessions = {}
 	self.logger = Logger.new('session')
 	self.timer = Timer.new()
+	self.random = Random.new()
 end
 
 function SessionManager:run()
@@ -58,7 +60,8 @@ function SessionManager:setUpSession(msg, resp_chan)
 		return
 	end
 	
-	
+	session:getChallengeTx():set(msg:getChallenge())
+	session:getChallengeRx():set(self.random:uint32())
 end
 
 function SessionManger:handleMessage(msg, resp_chan)
@@ -84,6 +87,8 @@ end
 function Session:init(manager, idLocal)
 	self.manager = manager
 	self.idLocal = idLocal
+	self.challengeRx = Challenge.new(0)
+	self.challengeTx = Challenge.new(0)
 	self.state = Session.state.IDLE
 end
 
@@ -97,6 +102,14 @@ end
 
 function Session:setRemoteId(id_remote)
 	self.idRemote = idRemote
+end
+
+function Session:getChallengeRx()
+	return self:challengeRx
+end
+
+function Session:getChallengeTx()
+	return self:challengeTx
 end
 
 return SessionManager
