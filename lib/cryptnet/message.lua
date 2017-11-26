@@ -1,3 +1,7 @@
+local Logger = require('lib/logger.lua')
+
+local DEBUG_LEVEL = Logger.INFO
+
 local util = require('lib/util.lua')
 
 local sha1 = require('lib/sha1.lua')
@@ -54,6 +58,25 @@ end
 
 function Message:init()
 	self.isTx = true
+	self.logger = Logger.new('message ' .. (self.getType and self.getType() or ''))
+	
+	-- Set up getters and setters based on params
+	if self.getParams then
+		for _,v in ipairs(self.getParams()) do
+		local param = string.gsub(v, '^[a-z]', string.upper)
+		local getter = 'get' .. param
+		local setter = 'set' .. param
+		self.logger:debug('Adding getter ' .. getter)
+		self[getter] = function(self) return self[v] end
+		self.logger:debug('Adding setter ' .. setter)
+		self[setter] = function(self, value) self[v] = value end
+		end
+	end
+	
+	-- Set type if applicable
+	if self:getClass().getType then
+		self:setType(self:getClass().getType())
+	end
 end
 
 function Message:copyParams(msg)
@@ -63,32 +86,68 @@ function Message:copyParams(msg)
 end
 
 function Message:hmac(key, challenge)
-	local strHmac = self:strHmac() .. challenge
+	local strHmac = self:strHmac() .. tostring(challenge:get())
 	return sha1.hmac(key:getKey(), strHmac)
 end
 
 function Message:validate(key, challenge)
-	local expected = self:hmac(key, challenge)
+	local expected = self:hmac(key:getKey(), tostring(challenge:get()))
 	local actual = self:getHmac()
 	return expected == actual
+end
+
+function Message:toTable()
+	local tbl = {}
+	for _,v in ipairs(self.getParams()) do
+		tbl[v] = self[v]
+	end
+	return tbl
 end
 
 function Message:getLocalId()
 	return self.isTx and self.id_a or self.id_b
 end
 
+function Message:getRemoteId()
+	return self.isTx and self.id_b or self.id_a
+end
+
+function Message:getSenderId()
+	return self.id
+end
+
+function Message:getRecipientId()
+	return self.id_recipient
+end
+
 function Message:getHmac()
 	return self.hmac
 end
 
+function Message:isAuthenticated()
+	return true
+end
+
+
+
+
+function MessageAssoc.getType()
+	return Message.type.ASSOC
+end
 
 function MessageAssoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'keyid', 'challenge'}
 end
 
-function MessageAssoc:getChallenge()
-	return self.challenge
+function MessageAssoc.getType()
+	return Message.type.ASSOC_RESP
 end
+
+function MessageAssoc:isAuthenticated()
+	return false
+end
+
+
 
 
 function MessageAssocResponse.getParams()
@@ -99,6 +158,12 @@ function MessageAssocResponse:strHmac()
 	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.challenge) 
 end
 
+
+
+
+function MessageData.getType()
+	return Message.type.DATA
+end
 
 function MessageData.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'data'}
@@ -117,14 +182,32 @@ function MessageData:decrypt(key)
 end
 
 
+
+
+function MessageDataResponse.getType()
+	return Message.type.DATA_RESP
+end
+
 function MessageDataResponse.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'success', 'challenge'}
 end
 
-function MessageData:strHmac()
+function MessageDataResponse:strHmac()
 	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.success) .. tostring(self.challenge)
 end
 
+function MessageDataResponse:validate(key, _)
+	local expected = self:hmac(key:getKey(), '')
+	local actual = self:getHmac()
+	return expected == actual
+end
+
+
+
+
+function MessageDeassoc.getType()
+	return Message.type.DEASSOC
+end
 
 function MessageDeassoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac'}
@@ -133,5 +216,8 @@ end
 function MessageData:strHmac()
 	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b)
 end
+
+
+
 
 return Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc

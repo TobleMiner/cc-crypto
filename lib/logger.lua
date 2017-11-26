@@ -16,23 +16,26 @@ function Logger:log(msg, level)
 	end
 end
 
-function Logger:error(self, msg)
+function Logger:error(msg)
 	self:log(msg, Logger.ERROR)
 end
 
-function Logger:warn(self, msg)
+function Logger:warn(msg)
 	self:log(msg, Logger.WARNING)
 end
 
-function Logger:info(self, msg)
+function Logger:info(msg)
 	self:log(msg, Logger.INFO)
 end
 
-function Logger:debug(self, msg)
+function Logger:debug(msg)
 	self:log(msg, Logger.DEBUG)
 end
 
 function Logger:init(name, level)
+	if not level then
+		level = Logger.DEBUG
+	end
 	self.name = name
 	self.level = level
 end

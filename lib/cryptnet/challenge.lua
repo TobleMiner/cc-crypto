@@ -8,13 +8,17 @@ function Challenge:init(challenge)
 	self.challenge = challenge
 end
 
+function Challenge:inc()
+	if self.challenge == bit.blshift(1, CHALLENGE_LENGTH) - 1 then
+		self.challenge = 0
+	else
+		self.challenge = self.challenge + 1
+	end
+end
+
 function Challenge:getAndInc()
 	local ret = self.challenge
-	if self.challenge == bit.blshift(1, CHALLENGE_LENGTH) - 1 then
-		challenge = 0
-	else
-		challenge = challenge + 1
-	end
+	self:inc()
 	return ret
 end
 

@@ -88,7 +88,7 @@ function Cryptnet:init(side, keyStore, proto)
 		logger_str = logger_str .. ' (' .. proto .. ')' 
 	end
 	
-	self.channel = os.getComputerID()
+	self.ownId = os.getComputerID()
 	self.keyStore = keystore
 	self.sessionManger = SessionManger.new(self)
 	self.logger = Logger.new(logger_str, DEBUG_LEVEL)
@@ -96,14 +96,18 @@ function Cryptnet:init(side, keyStore, proto)
 	self.proto = proto
 end
 
+function Cryptnet:sendMessage(msg, chan)
+	self.modem.transmit(chan, self.ownId, msg)
+end
+
 function Cryptnet:run()
-	if not self.modem.isOpen(self.channel) then
-		modem.open(self.channel)	
+	if not self.modem.isOpen(self.ownId) then
+		self.modem.open(self.ownId)	
 	end
 	
 	while true do
 		local event, side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
-		if side == self.side and chan == self.channel then
+		if side == self.side and chan == self.ownId then
 			local message = Message.parse(self, msg)
 			if message then
 				self.sessionManger:handleMessage(message, resp_chan)
@@ -112,6 +116,10 @@ function Cryptnet:run()
 			os.queueEvent(event, side, chan, resp_chan, msg, dist)
 		end
 	end
+end
+
+function Cryptnet:getOwnId()
+	return self.ownId
 end
 
 function Cryptnet:getKeyStore()
