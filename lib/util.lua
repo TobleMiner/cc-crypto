@@ -17,17 +17,18 @@ function util.class(parent)
 	local class = {}
 	local class_mt = { __index = class 	}
 	
-	function class:create()
+	function class.create()
 		local obj = {}
 		setmetatable(obj, class_mt)
 		return obj
 	end
 
-	function class:new(...)
+	function class.new(...)
 		local obj = class:create()
 		if obj.init then
 			obj:init(...)
 		end
+		return obj
 	end
 	
 	if parent then

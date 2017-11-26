@@ -3,6 +3,11 @@ local util = require('lib/util.lua')
 local SessionManager = util.class()
 local Session = util.class()
 
+Session.state = {}
+Session.state.ASSOCIATE = 0
+Session.state.ASSOCIATED = 1
+Session.state.DEAD = 2
+
 function SessionManager:init(cryptnet)
 	self.cryptnet = cryptnet
 	self.sessions = {}

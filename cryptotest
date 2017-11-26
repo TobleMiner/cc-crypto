@@ -1,4 +1,4 @@
-Message, MessageAssoc = require('lib/cryptnet/message.lua')
+--[[Message, MessageAssoc = require('lib/cryptnet/message.lua')
 
 msg = {type = Message.type.DEASSOC, id = 42, id_recipient = 23, id_a = 0, id_b = 42, keyid = 0, challenge = 'asdfasda', hmac = 'hitler'}
 
@@ -20,3 +20,23 @@ function printTable(tbl, prefix)
 end
 
 printTable(message)
+
+
+os.loadAPI('parallel')
+
+local TimerManger = require('lib/timer.lua')
+
+local manager = TimerManger.new()
+
+local function callback(str1, str2)
+	print(str1)
+	print(str2)
+end
+
+local function doStuff()
+	manager:setTimeout(callback, 3000, "Hello", "World")
+end
+
+parallel.waitForAll(function() manager:run() end, doStuff)
+
+]]
