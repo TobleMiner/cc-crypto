@@ -58,7 +58,8 @@ local Cryptnet = util.class()
 				
 		DATA_RESP:
 			This packet is not really authenticated too well but adding authentication would result in problems with lost response messages, too.
-			Also current_challenge changes with each msg received thus it should be a rather small-ish problem
+			Also current_challenge changes with each msg received thus it should be a rather small-ish problem. It might be possible however to use this message
+			to force a reset of te challenge to a known value resulting in a replay attack scenario
 			(cleartext)
 				type: "data_response"
 				id_a: local session id of sending station

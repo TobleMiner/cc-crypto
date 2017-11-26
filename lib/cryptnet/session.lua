@@ -183,10 +183,17 @@ function Session:handleMessage(msg)
 		response = session:handleAssoc(msg)
 		handled = true
 	elseif msg:isa(MessageAssocResponse) then
-		self:handleAssocResponse()
+		self:handleAssocResponse(msg)
 		handled = true
 	elseif msg:isa(MessageData) then
-		self:handle
+		response = self:handleData(msg)
+		handled = true
+	elseif msg:isa(MessageDataResponse) then
+		-- TODO: Maybe implement resend via handleDataResponse return value?
+		self:handleDataResponse(msg)
+		handled = true
+	elseif msg:isa(MessageDeassoc) then
+		self:handleDeassoc(msg)
 		handled = true
 	end
 
@@ -203,11 +210,15 @@ function Session:handleMessage(msg)
 end
 
 function Session:handleAssoc(msg)
+	if self.state ~= Session.state.ASSOCIATE then
+		self.logger:warn('Received association in invalid state '..tostring(self.state))
+		return
+	end
+	
 	local assocResp = MessageAssocResponse.new()
 
 	session:setTxIds(assocResp)
 	assocResp:setChallenge(self:getChallengeRx():get())
-	assocResp:setHmac(assocResp:hmac(self:getKey(), self:getChallengeTx()))
 
 	-- "Handshake" complete (although everything might have gone wrong)
 	self.state = Session.state.ASSOCIATED
@@ -219,6 +230,11 @@ function Session:handleAssoc(msg)
 end
 
 function Session:handleAssocResponse(msg)
+	if self.state ~= Session.state.ASSOCIATE then
+		self.logger:warn('Received association response in invalid state '..tostring(self.state))
+		return
+	end
+
 	self:getChallengeTx():set(msg:getChallenge())
 
 	-- "Handshake" complete (although everything might have gone wrong)
@@ -228,12 +244,61 @@ function Session:handleAssocResponse(msg)
 	self:resetTerminationTimeout()
 end
 
+function Session:handleData(msg)
+	if self.state ~= Session.state.ASSOCIATED then
+		self.logger:warn('Received data in invalid state '..tostring(self.state))
+		return
+	end
+
+	print(msg:decrypt(self:getKey()))
+
+	local dataResp = MessageDataResponse.new()
+
+	session:setTxIds(dataResp)
+	-- Special challenge reset function; Only nedded for verification failure path
+	-- dataResp:setChallenge(self:getChallengeRx():get())
+	dataResp:setSuccess(true)
+	
+	-- Kill unresponsive sessions
+	self:resetTerminationTimeout()
+	
+	return dataResp
+end
+
+function Session:handleDataResponse(msg)
+	if self.state ~= Session.state.ASSOCIATED then
+		self.logger:warn('Received data response in invalid state '..tostring(self.state))
+		return
+	end
+
+	-- TODO: implement
+	
+	-- Kill unresponsive sessions
+	self:resetTerminationTimeout()
+end
+
+function Session:handleDeassoc(msg)
+	if self.state ~= Session.state.ASSOCIATED then
+		self.logger:warn('Received deassoc in invalid state '..tostring(self.state))
+		return
+	end
+
+	self:kill()
+end
+
 function Session:resetTerminationTimeout()
 	local timer = self.manager:getTimer()
 	if self.timerTerminate then
-		timer.clearTimeout(self.timerTerminate)
+		timer:clearTimeout(self.timerTerminate)
 	end
-	self.timerTerminate = timer.setTimeout(self.terminate, SESSION_TIMEOUT, self)
+	self.timerTerminate = timer:setTimeout(self.terminate, SESSION_TIMEOUT, self)
+end
+
+function Session:kill()
+	if self.timerTerminate then
+		self.manager:getTimer():clearTimeout(self.timerTerminate)
+	end
+	self:terminate()
 end
 
 function Session:terminate()
