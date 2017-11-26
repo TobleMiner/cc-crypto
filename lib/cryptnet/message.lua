@@ -43,15 +43,24 @@ function Message.fromMsg(clazz, cryptnet, msg)
 			cryptnet.getLogger().error('Failed to parse message, missing keys')
 	end
 
-	local message = clazz.create()
+	local message = clazz.new()
+	message.isTx = false
 	message:copyParams(msg)
 	return message
+end
+
+function Message:init()
+	self.isTx = true
 end
 
 function Message:copyParams(msg)
 	for _, k in ipairs(self.getParams()) do
 		self[k] = msg[k]
 	end
+end
+
+function Message:getLocalId()
+	return self.isTx and self.id_a or self.id_b
 end
 
 
@@ -82,4 +91,4 @@ function MessageDeassoc.getParams()
 	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac'}
 end
 
-return Message, MessageAssoc
+return Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc

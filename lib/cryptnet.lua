@@ -8,18 +8,13 @@ local md5 = require('lib/md5.lua')
 local util = require('lib/util.lua')
 local logger = require('lib/logger.lua')
 
-local Message, MessageAssoc = require('lib/cryptnet/message.lua')
+local SessionManger = require('lib/cryptnet/session.lua')
+
+local Message = require('lib/cryptnet/message.lua')
 
 local DEBUG_LEVEL = logger.DEBUG
 
-local MAX_NUM_SESSIONS = 1000
-
-local SESSION_TIMEOUT = 3000
-local MSG_TIMEOUT = 1000
-local MSG_RESEND_COUNT = 4
-
-
-local Cryptnet = {}
+local Cryptnet = util.class()
 
 --[[
 	This is a rough explanation of the message format. It should be reasonably(TM) secure
@@ -86,168 +81,45 @@ local Cryptnet = {}
 				hmac: hmac of all other paramters + current challenge
 ]]
 
-	
--- This is a pretty bad rng. math.random is only a PRNG
-local cryptnet_random32()
-	return math.random(0, bit.blshift(1, 32) - 1)
-end
-
-local cryptnet_find_free_local_id(self)
-	for local id=0, MAX_NUM_SESSIONS do
-		if util.table_has(self.sessions, id) then
-			return id
-		end
-	end
-	return nil
-end
-
-local function cryptnet_session_reset_timeout(self)
-
-end
-
-function Cryptnet.Session.new(cryptnet)
-	local id_a = cryptnet_find_free_local_id(cryptnet)
-	local logger = logger.new("[SESSION " .. tostring(id_a) .. "]")
-	if not id_a then
-		logger.error("No free local session id found")
-	end
-	local challenge_rx = cryptnet_random32()
-	return {	id_a = id_a,
-				id_b = nil,
-				logger = logger
-				challenge_rx = challenge_rx,
-				challenge_tx = nil,
-				state = Cryptnet.state.ASSOCIATE }
-end
-
-local function cryptnet_check_msg_base(self, msg)
-	if not util.table_has(msg, 'type') then
-		self.logger:warn('Received message has no ')
-		return false
-	end
-	if not util.table_has(msg, 'id') then
-		return false
-	end
-end
-
-local function cryptnet_handle_msg(self, msg, chan, resp_chan)
-	
-	if msg.type == Cryptnet.msg_type.ASSOC then
-	
-	elseif msg.type == Cryptnet.msg_type.ASSOC_RESP then
-	
-	elseif msg.type == Cryptnet.msg_type.DATA then
-	
-	elseif msg.type == Cryptnet.msg_type.DATA_RESP then
-	
-	elseif msg.type == Cryptnet.msg_type.DEASSOC then
-	
-	else
-	
-	end
-	if not table_key_exists(msg, 'id') then
-		return nil
-	end
-	if type(msg.id) ~= 'number' then
-		return nil
-	end
-	
-	if not table_key_exists(msg, 'hmac') then
-		return nil
-	end
-	if type(msg.hmac) ~= 'string' then
-		return nil
-	end
-
-	if not table_key_exists(msg, 'data') then
-		return nil
-	end
-	if type(msg.data) ~= 'string' then
-		return nil
-	end
-	
-	local id_hmac = msg.id;
-	if msg.id ~= sender_id then
-		return nil
-	end		
-end
-
-function cryptnet_send(self, msg, id_to)
-	
-end
-
-function cryptnet_receive(self)
-	while true do
-		local side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
-		if side == self.side then
-			cryptnet_handle_msg(self, msg, chan, resp_chan)
-		else
-			-- Nope, not our event
-			os.queueEvent('mode_message', side, chan, resp_chan, msg, dist)
-		end
-	end
-end
-
-function Cryptnet.new(side, keystore, proto)
+function Cryptnet:init(side, keyStore, proto)
 	local modem = peripheral.wrap(side)
-	local logger_str = 'CRYPTNET ' .. modem;
+	local logger_str = 'CRYPTNET ' .. side;
 	if proto then
 		logger_str = logger_str .. ' (' .. proto .. ')' 
 	end
-	rednet.open(modem)
-	return { 	keystore = keystore, 
-				side = side,
-				modem = modem,
-				proto = proto,
-				sessions = {},
-				logger = logger.new(logger_str, DEBUG_LEVEL),
-				send = cryptnet_send,
-				receive = cryptnet_receive,
-				getLogger = function(self) return self.logger; end}
+	
+	self.channel = os.getComputerID()
+	self.keyStore = keystore
+	self.sessionManger = SessionManger.new(self)
+	self.logger = Logger.new(logger_str, DEBUG_LEVEL)
+	self.modem = modem
+	self.proto = proto
 end
 
-local Key = {}
-
-local function key_get_id(self)
-	return self.id
-end
-
-local function key_get_valid_remote_ids(self)
-	return self.remote_ids
-end
-
-function Key.new(logger, key, remote_ids)
-	if remote_ids ~= 'nil' and type(remote_ids) ~= 'table' then
-		logger:error('Remote ids must be a table')
+function Cryptnet:run()
+	if not self.modem.isOpen(self.channel) then
+		modem.open(self.channel)	
 	end
-	local id = md5.sumhexa(key)
-	return {	id = id,
-				key = key,
-				remote_ids = remote_ids,
-				get_id = key_get_id,
-				get_valid_remote_ids = key_get_valid_remote_ids }
-end
-
-local Keystore = {}
-
-local function keystore_add(self, key, remote_ids)
-	local key = Key.new(self.logger, key, remote_ids)
-	if(util.table_has(self.keys, key:get_id())) then
-		self.logger:warn("Duplicate key id '" .. id .. "' overwriting old key")
+	
+	while true do
+		local event, side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
+		if side == self.side and chan == self.channel then
+			local message = Message.parse(self, msg)
+			if message then
+				self.sessionManger:handleMessage(message, resp_chan)
+			end
+		else
+			os.queueEvent(event, side, chan, resp_chan, msg, dist)
+		end
 	end
-
-	self.keys[key.get_id()] = key
 end
 
-local function keystore_get(self, id)
-	return self.keys[id]
+function Cryptnet:getKeyStore()
+	return self.keyStore
 end
 
-function Keystore.new()
-	return { 	keys = {},
-				logger = logger.new('KEYSTORE', DEBUG_LEVEL),
-				add_key = keystore_add,
-				get_key = keystore_get }
+function Cryptnet:getLogger()
+	return self.logger
 end
 
-return Cryptnet, Keystore
+return Cryptnet
