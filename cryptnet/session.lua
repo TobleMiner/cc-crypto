@@ -62,7 +62,7 @@ end
 
 function SessionManager:updateQueues()
 	for id,qkp in pairs(self.messageQueues) do
-		self.logger:debug('Queue length: ' .. qkp:getQueue():size())
+		self.logger:debug('Tx queue length: ' .. qkp:getQueue():size())
 		if not qkp:getQueue():isEmpty() then
 			local session = self:getSessionForPeer(id)
 			if not session then

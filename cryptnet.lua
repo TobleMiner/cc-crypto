@@ -10,6 +10,8 @@ local SessionManger = require('lib/cryptnet/session.lua')
 
 local Message = require('lib/cryptnet/message.lua')
 
+local KeyStore, Key = require('lib/cryptnet/key.lua')
+
 local DEBUG_LEVEL = Logger.INFO
 
 local Callback = util.class()
@@ -169,4 +171,4 @@ function Cryptnet:getLogger()
 	return self.logger
 end
 
-return Cryptnet
+return Cryptnet, KeyStore, Key
