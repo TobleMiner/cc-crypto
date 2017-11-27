@@ -1,5 +1,4 @@
 os.loadAPI("util/include")
---os.loadAPI("parallel")
 
 local util = require('lib/util.lua')
 local Logger = require('lib/logger.lua')
@@ -18,7 +17,11 @@ function Callback:init(callback, ...)
 end
 
 function Callback:call(...)
-	self.callback(table.unpack(self.args), ...)
+	if #self.args > 0 then
+		self.callback(table.unpack(self.args), ...)
+	else
+		self.callback(...)
+	end
 end
 
 local Cryptnet = util.class()
@@ -99,6 +102,9 @@ function Cryptnet:init(side, keyStore, rxCallback, ...)
 	self.sessionManger = SessionManger.new(self)
 	self.logger = Logger.new(logger_str, DEBUG_LEVEL)
 	self.modem = modem
+	if rxCallback then
+		self.rxCallback = Callback.new(rxCallback, ...)
+	end
 end
 
 function Cryptnet:sendMessage(msg, chan)
@@ -133,6 +139,12 @@ end
 
 function Cryptnet:send(msg, recipient, key)
 	self.sessionManger:enqueueMessage(msg, recipient, key)
+end
+
+function Cryptnet:onRx(msg)
+	if self.rxCallback then
+		self.rxCallback:call(msg)
+	end
 end
 
 function Cryptnet:getOwnId()

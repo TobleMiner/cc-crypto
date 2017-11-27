@@ -8,7 +8,6 @@ local sha1 = require('lib/sha1.lua')
 local aeslua = require("/lib/aeslua.lua")
 require("lib/base64.lua")
 
---os.loadAPI('textutils')
 
 local Message = util.class()
 local MessageAssoc = util.class(Message)

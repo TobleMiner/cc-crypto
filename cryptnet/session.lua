@@ -415,7 +415,7 @@ function Session:handleData(msg)
 		return
 	end
 
-	vardump(msg:decrypt(self:getKey()))
+	self.manager:getCryptnet():onRx(msg:decrypt(self:getKey()))
 
 	local dataResp = MessageDataResponse.new()
 
