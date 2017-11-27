@@ -62,17 +62,20 @@ end
 
 function SessionManager:updateQueues()
 	for id,qkp in pairs(self.messageQueues) do
-		local session = self:getSessionForPeer(id)
-		if not session then
-			self.logger:debug('No session found, creating new session')
-			session = self:allocateSession(qkp:getKey(), id)
-			if session then
-				self:setUpSession(session)
-				session:associate()
+		self.logger:debug('Queue length: ' .. qkp:getQueue():size())
+		if not qkp:getQueue():isEmpty() then
+			local session = self:getSessionForPeer(id)
+			if not session then
+				self.logger:debug('No session found, creating new session')
+				session = self:allocateSession(qkp:getKey(), id)
+				if session then
+					self:setUpSession(session)
+					session:associate()
+				end
 			end
-		end
-		if session then
-			session:notify()
+			if session then
+				session:notify()
+			end
 		end
 	end
 end
