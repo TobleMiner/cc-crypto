@@ -11,7 +11,7 @@ end
 
 function KeyStore:addKey(key)
 	if util.table_has(self.keys, key:getId()) then
-		self.logger.warn('Duplicate key id '..key)
+		self.logger:warn('Duplicate key id '..key)
 	end
 	self.keys[key:getId()] = key
 end

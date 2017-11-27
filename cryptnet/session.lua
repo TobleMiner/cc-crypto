@@ -92,7 +92,7 @@ end
 function SessionManager:allocateSession(...)
 	local id = self:getFreeSessionId()
 	if not id then
-		self.logger.warn('Failed to allocate session id')
+		self.logger:warn('Failed to allocate session id')
 		return nil
 	end
 	
@@ -109,7 +109,7 @@ function SessionManager:associateSession(msg, resp_chan)
 	local keyId = msg:getKeyid()
 	local key = self.cryptnet:getKeyStore():getKey(keyId)
 	if not key then
-		self.logger.warn("Failed to find key for id")
+		self.logger:warn("Failed to find key for id")
 		return nil
 	end
 	
@@ -122,7 +122,7 @@ function SessionManager:associateSession(msg, resp_chan)
 	
 	local session = self:allocateSession(key, msg:getId())
 	if not session then
-		self.logger.warn('Failed to allocate session')
+		self.logger:warn('Failed to allocate session')
 		return nil
 	end
 	

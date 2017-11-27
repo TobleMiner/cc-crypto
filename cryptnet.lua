@@ -139,7 +139,7 @@ function Cryptnet:listen()
 					self.sessionManger:handleMessage(message, resp_chan)
 				end
 			end) then
-				self.logger.warn('Message handling failed')
+				self.logger:warn('Message handling failed')
 			end
 		else
 			os.queueEvent(event, side, chan, resp_chan, msg, dist)
