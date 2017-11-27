@@ -110,9 +110,7 @@ function Cryptnet:init(side, keyStore, rxCallback, ...)
 	self.sessionManger = SessionManger.new(self)
 	self.logger = Logger.new(logger_str, DEBUG_LEVEL)
 	self.modem = modem
-	if rxCallback then
-		self.rxCallback = Callback.new(rxCallback, ...)
-	end
+	self:setRxCallback(rxCallback, ...)
 end
 
 function Cryptnet:sendMessage(msg, chan)
@@ -156,6 +154,14 @@ end
 function Cryptnet:onRx(msg)
 	if self.rxCallback then
 		self.rxCallback:call(msg)
+	end
+end
+
+function Cryptnet:setRxCallback(rxCallback, ...)
+	if rxCallback then
+		self.rxCallback = Callback.new(rxCallback, ...)
+	else
+		self.rxCallback = nil
 	end
 end
 
