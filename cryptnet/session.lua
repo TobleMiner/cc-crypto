@@ -267,7 +267,7 @@ function Session:notify()
 		data:setHmac(data:calcHmac(self:getKey(), self:getChallengeTx()))
 		
 		-- Kill unresponsive sessions
-		self:resetTerminationTimeout()
+		-- self:resetTerminationTimeout()
 		
 		self.logger:debug('inc challenge TX')
 		self:getChallengeTx():inc()
