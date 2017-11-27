@@ -6,7 +6,7 @@ local MSG_RESEND_COUNT = 4
 
 local Logger = require('lib/logger.lua')
 
-local DEBUG_LEVEL = Logger.DEBUG
+local DEBUG_LEVEL = Logger.INFO
 
 local util = require('lib/util.lua')
 local Timer = require('lib/timer.lua')
@@ -64,7 +64,7 @@ function SessionManager:updateQueues()
 	for id,qkp in pairs(self.messageQueues) do
 		local session = self:getSessionForPeer(id)
 		if not session then
-			self.logger:info('No session found, creating new session')
+			self.logger:debug('No session found, creating new session')
 			session = self:allocateSession(qkp:getKey(), id)
 			if session then
 				self:setUpSession(session)
@@ -415,9 +415,7 @@ function Session:handleData(msg)
 		return
 	end
 
-	vardump(msg.data)
-	
-	print(msg:decrypt(self:getKey()))
+	vardump(msg:decrypt(self:getKey()))
 
 	local dataResp = MessageDataResponse.new()
 

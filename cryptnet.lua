@@ -1,5 +1,5 @@
 os.loadAPI("util/include")
-os.loadAPI("parallel")
+--os.loadAPI("parallel")
 
 local util = require('lib/util.lua')
 local Logger = require('lib/logger.lua')
@@ -9,6 +9,17 @@ local SessionManger = require('lib/cryptnet/session.lua')
 local Message = require('lib/cryptnet/message.lua')
 
 local DEBUG_LEVEL = Logger.INFO
+
+local Callback = util.class()
+
+function Callback:init(callback, ...)
+	self.callback = callback
+	self.args = table.pack(...)
+end
+
+function Callback:call(...)
+	self.callback(table.unpack(self.args), ...)
+end
 
 local Cryptnet = util.class()
 
@@ -78,7 +89,7 @@ local Cryptnet = util.class()
 				hmac: hmac of all other paramters + current challenge
 ]]
 
-function Cryptnet:init(side, keyStore)
+function Cryptnet:init(side, keyStore, rxCallback, ...)
 	local modem = peripheral.wrap(side)
 	local logger_str = 'CRYPTNET ' .. side
 	
@@ -108,9 +119,8 @@ function Cryptnet:listen()
 	self.logger:debug('Listening...')
 	while true do
 		local event, side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
-		self.logger:debug('Got message')
 		if side == self.side and chan == self.ownId then
-			self.logger:debug('Got valid message')
+			self.logger:debug('Got message')
 			local message = Message.parse(self, msg)
 			if message then
 				self.sessionManger:handleMessage(message, resp_chan)

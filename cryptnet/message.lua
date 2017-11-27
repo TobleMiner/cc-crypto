@@ -8,6 +8,8 @@ local sha1 = require('lib/sha1.lua')
 local aeslua = require("/lib/aeslua.lua")
 require("lib/base64.lua")
 
+--os.loadAPI('textutils')
+
 local Message = util.class()
 local MessageAssoc = util.class(Message)
 local MessageAssocResponse = util.class(Message)
@@ -35,7 +37,8 @@ end
 
 function Message.parse(cryptnet, msg)
 	if not util.table_has(msg, Message.getParams()) then
-		cryptnet:getLogger():error('Failed to parse packet, missing keys')
+		cryptnet:getLogger():warn('Failed to parse packet, missing keys')
+		return nil
 	end
 	
 	local msgType = msg.type
@@ -48,7 +51,8 @@ end
 
 function Message.fromMsg(clazz, cryptnet, msg)
 	if not util.table_has(msg, clazz.getParams()) then
-		cryptnet:getLogger():error('Failed to parse message, missing keys')
+		cryptnet:getLogger():warn('Failed to parse message, missing keys')
+		return nil
 	end
 
 	local message = clazz.new()
@@ -175,11 +179,11 @@ function MessageData:strHmac()
 end
 
 function MessageData:encrypt(key, data)
-	self.data = base64_encode(aeslua.encrypt(key:getKey(), data, aeslua.AES128, aeslua.CBCMODE))
+	self.data = base64_encode(aeslua.encrypt(key:getKey(), textutils.serialize(data), aeslua.AES128, aeslua.CBCMODE))
 end
 
 function MessageData:decrypt(key)
-	return aeslua.decrypt(key:getKey(), base64_decode(self.data), aeslua.AES128, aeslua.CBCMODE)
+	return textutils.unserialize(aeslua.decrypt(key:getKey(), base64_decode(self.data), aeslua.AES128, aeslua.CBCMODE))
 end
 
 
