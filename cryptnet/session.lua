@@ -479,6 +479,7 @@ function Session:terminate()
 	self.state = Session.state.DEAD
 	self.timerTerminate = nil
 	self.manager:removeSession(self)
+	self.manager:updateQueues()
 end
 
 
