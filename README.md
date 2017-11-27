@@ -77,6 +77,6 @@ local cryptnet = Cryptnet.new('back', keyStore)
 parallel.waitForAll(
 	-- Start cryptnet worker coroutine
 	function() cryptnet:run() end,
-	-- Send some messages
+	-- Send some messages, arguments: <message>, <recipient computer id>, <key>
 	function() cryptnet:send('Hello World', 1, key); cryptnet:send({ foo = 'bar', bar = 'foo' }, 1, key); cryptnet:send(true, 1, key) end)
 ```
