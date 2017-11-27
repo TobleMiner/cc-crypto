@@ -8,12 +8,11 @@ function Queue:init()
 	elem:setNext(elem)
 	elem:setPrev(elem)
 	self.head = elem
-	self.tail = self.head
 	self.length = 0
 	end
 
 function Queue:isEmpty()
-	return self.head == self.tail
+	return self.head == self:getTail()
 end
 
 function Queue:size()
@@ -21,10 +20,9 @@ function Queue:size()
 end
 
 function Queue:enqueue(val)
-	local elem = Element.new(val, self.head, self.tail)
-	self.tail:setNext(elem)
+	local elem = Element.new(val, self.head, self:getTail())
+	self:getTail():setNext(elem)
 	self.head:setPrev(elem)
-	self.tail = elem
 	self.length = self.length + 1
 end
 
@@ -38,12 +36,15 @@ function Queue:dequeue()
 	valHead:getNext():setPrev(self.head)
 	valHead:getPrev():setNext(valHead:getNext())
 	-- Disconnect head
-	valHead:setNext(self.head)
-	valHead:setPrev(self.head)
+	valHead:setNext(valHead)
+	valHead:setPrev(valHead)
 	self.length = self.length - 1
 	return valHead:getValue()
 end
 
+function Queue:getTail()
+	return self.head:getPrev()
+end
 
 function Element:init(val, next, prev)
 	self.val = val
