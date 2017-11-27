@@ -418,7 +418,7 @@ function Session:handleData(msg)
 		return
 	end
 
-	self.manager:getCryptnet():onRx(msg:decrypt(self:getKey()))
+	self.manager:getCryptnet():onRx(msg:decrypt(self:getKey()), self:getPeerId())
 
 	local dataResp = MessageDataResponse.new()
 

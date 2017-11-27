@@ -151,9 +151,9 @@ function Cryptnet:send(msg, recipient, key)
 	self.sessionManger:enqueueMessage(msg, recipient, key)
 end
 
-function Cryptnet:onRx(msg)
+function Cryptnet:onRx(msg, remoteId)
 	if self.rxCallback then
-		self.rxCallback:call(msg)
+		self.rxCallback:call(msg, remoteId)
 	end
 end
 
