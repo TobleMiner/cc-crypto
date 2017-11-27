@@ -1,6 +1,6 @@
 local util = require('lib/util.lua')
 
-local CHALLENGE_LENGTH = 32
+local CHALLENGE_LENGTH = 31
 
 local Challenge = util.class()
 

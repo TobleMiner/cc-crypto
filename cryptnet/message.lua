@@ -6,6 +6,7 @@ local util = require('lib/util.lua')
 
 local sha1 = require('lib/sha1.lua')
 local aeslua = require("/lib/aeslua.lua")
+require("lib/base64.lua")
 
 local Message = util.class()
 local MessageAssoc = util.class(Message)
@@ -58,7 +59,7 @@ end
 
 function Message:init()
 	self.isTx = true
-	self.logger = Logger.new('message ' .. (self.getType and self.getType() or ''))
+	self.logger = Logger.new('message ' .. (self.getType and self.getType() or ''), DEBUG_LEVEL)
 	
 	-- Set up getters and setters based on params
 	if self.getParams then
@@ -86,7 +87,6 @@ function Message:copyParams(msg)
 end
 
 function Message:calcHmac(key, challenge)
-	vardump(challenge)
 	local strHmac = self:strHmac() .. tostring(challenge:get())
 	return sha1.hmac(key:getKey(), strHmac)
 end
@@ -175,11 +175,11 @@ function MessageData:strHmac()
 end
 
 function MessageData:encrypt(key, data)
-	self.data = aeslua.encrypt(key.getKey(), data, aeslua.AES128, aeslua.CBCMODE)
+	self.data = base64_encode(aeslua.encrypt(key:getKey(), data, aeslua.AES128, aeslua.CBCMODE))
 end
 
 function MessageData:decrypt(key)
-	return aeslua.decrypt(key.getKey(), self.data, aeslua.AES128, aeslua.CBCMODE)
+	return aeslua.decrypt(key:getKey(), base64_decode(self.data), aeslua.AES128, aeslua.CBCMODE)
 end
 
 

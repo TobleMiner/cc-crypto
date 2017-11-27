@@ -64,7 +64,7 @@ function SessionManager:updateQueues()
 	for id,qkp in pairs(self.messageQueues) do
 		local session = self:getSessionForPeer(id)
 		if not session then
-			self.logger:debug('No session found, creating new session')
+			self.logger:info('No session found, creating new session')
 			session = self:allocateSession(qkp:getKey(), id)
 			if session then
 				self:setUpSession(session)
@@ -141,7 +141,7 @@ end
 
 function SessionManager:getSessionForPeer(peerId)
 	for _,session in ipairs(self.sessions) do
-		if session.getPeerId == peerId and not session:isDead() then
+		if session:getPeerId() == peerId and not session:isDead() then
 			return session
 		end
 	end
@@ -228,7 +228,9 @@ function Session:associate()
 	end
 
 	self.logger:debug('Associating session')
-
+	
+	self:getChallengeRx():set(self.manager.random:uint32())
+	
 	local assoc = MessageAssoc.new()
 	self:setTxIds(assoc)
 	assoc:setKeyid(self:getKey():getId())
@@ -257,12 +259,14 @@ function Session:notify()
 		
 		local data = MessageData.new()
 		self:setTxIds(data)
-		data:encrypt(message)
+		data:encrypt(self.key, message)
+		self.logger:debug('Sign '..data:getType()..' '..tostring(self:getChallengeTx():get()))
 		data:setHmac(data:calcHmac(self:getKey(), self:getChallengeTx()))
 		
 		-- Kill unresponsive sessions
 		self:resetTerminationTimeout()
 		
+		self.logger:debug('inc challenge TX')
 		self:getChallengeTx():inc()
 		self.manager:getCryptnet():sendMessage(data:toTable(), self.peerMac)
 	end
@@ -309,7 +313,7 @@ function Session:handleMessage(msg)
 	end
 	
 	if msg:isAuthenticated() then
-		vardump(self:getChallengeRx())
+		self.logger:debug('Verify '..msg:getType()..' '..tostring(self:getChallengeRx():get()))
 		if not msg:verify(self:getKey(), self:getChallengeRx()) then
 			self.logger:warn('Message verification failed, discarding message')
 			-- TODO: implement path for verification failures
@@ -343,15 +347,17 @@ function Session:handleMessage(msg)
 	end
 
 	if handled then
+		self.logger:debug('inc challenge RX')
 		self:getChallengeRx():inc()
 	end
 	
 	if response then
 		if response:isAuthenticated() then
-			vardump(self:getChallengeTx())
+			self.logger:debug('Sign '..response:getType()..' '..tostring(self:getChallengeTx():get()))
 			response:setHmac(response:calcHmac(self:getKey(), self:getChallengeTx()))
 		end
 		self.manager:getCryptnet():sendMessage(response:toTable(), self.peerMac)
+		self.logger:debug('inc challenge TX')
 		self:getChallengeTx():inc()
 	end
 	
@@ -368,7 +374,7 @@ function Session:handleAssoc(msg)
 		
 	self:setRemoteId(msg:getRemoteId())
 	self:getChallengeTx():set(msg:getChallenge())
-	session:getChallengeRx():set(self.manager.random:uint32())
+	self:getChallengeRx():set(self.manager.random:uint32())
 
 	local assocResp = MessageAssocResponse.new()
 	
@@ -390,9 +396,9 @@ function Session:handleAssocResponse(msg)
 		return
 	end
 
-	vardump(self:getChallengeTx())
-	
+	self:setRemoteId(msg:getRemoteId())
 	self:getChallengeTx():set(msg:getChallenge())
+	self:getChallengeTx():inc()
 
 	-- "Handshake" complete (although everything might have gone wrong)
 	self.state = Session.state.ASSOCIATED
@@ -409,6 +415,8 @@ function Session:handleData(msg)
 		return
 	end
 
+	vardump(msg.data)
+	
 	print(msg:decrypt(self:getKey()))
 
 	local dataResp = MessageDataResponse.new()
@@ -416,6 +424,7 @@ function Session:handleData(msg)
 	self:setTxIds(dataResp)
 	-- Special challenge reset function; Only nedded for verification failure path
 	-- dataResp:setChallenge(self:getChallengeRx():get())
+	dataResp:setChallenge('nil')
 	dataResp:setSuccess(true)
 	
 	-- Kill unresponsive sessions
@@ -431,7 +440,7 @@ function Session:handleDataResponse(msg)
 	end
 
 	-- TODO: implement
-	self.logger:debug(msg:getSuccess())
+	self.logger:debug(tostring(msg:getSuccess()))
 	
 	-- Kill unresponsive sessions
 	self:resetTerminationTimeout()
@@ -505,7 +514,7 @@ function Session:getKey()
 end
 
 function Session:getPeerId()
-	return self.peerId
+	return self.peerMac
 end
 
 function Session:isDead()

@@ -8,7 +8,7 @@ local SessionManger = require('lib/cryptnet/session.lua')
 
 local Message = require('lib/cryptnet/message.lua')
 
-local DEBUG_LEVEL = Logger.DEBUG
+local DEBUG_LEVEL = Logger.INFO
 
 local Cryptnet = util.class()
 
@@ -116,7 +116,7 @@ function Cryptnet:listen()
 				self.sessionManger:handleMessage(message, resp_chan)
 			end
 		else
-			--os.queueEvent(event, side, chan, resp_chan, msg, dist)
+			os.queueEvent(event, side, chan, resp_chan, msg, dist)
 		end
 	end
 end
