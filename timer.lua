@@ -21,9 +21,9 @@ function TimerManager:run()
 	while true do
 		local event, id = os.pullEvent('timer')
 		if util.table_has(self.timers, id) then
+			local callback = self.timers[id]
+			table.remove(self.timers, id)
 			pcall(function()
-				local callback = self.timers[id]
-				table.remove(self.timers, id)
 				callback:call()
 			end)
 		else
