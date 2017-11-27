@@ -4,16 +4,16 @@ local SESSION_TIMEOUT = 3000
 local MSG_TIMEOUT = 1000
 local MSG_RESEND_COUNT = 4
 
-local Logger = require('lib/logger.lua')
+local Logger = require('logger.lua')
 
 local DEBUG_LEVEL = Logger.INFO
 
-local util = require('lib/util.lua')
-local Timer = require('lib/timer.lua')
-local Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc = require('lib/cryptnet/message.lua')
-local Challenge = require('lib/cryptnet/challenge.lua')
-local Random = require('lib/random.lua')
-local Queue = require('lib/queue.lua')
+local util = require('util.lua')
+local Timer = require('timer.lua')
+local Message, MessageAssoc, MessageAssocResponse, MessageData, MessageDataResponse, MessageDeassoc = require('cryptnet/message.lua')
+local Challenge = require('cryptnet/challenge.lua')
+local Random = require('random.lua')
+local Queue = require('queue.lua')
 
 local QueueKeyPair = util.class()
 

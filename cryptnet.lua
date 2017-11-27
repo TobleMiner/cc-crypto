@@ -1,16 +1,16 @@
 os.loadAPI("util/include")
 
-sha1 = require('lib/sha1.lua')
-aeslua = require("/lib/aeslua.lua")
+sha1 = require('sha1.lua')
+aeslua = require("aeslua.lua")
 
-local util = require('lib/util.lua')
-local Logger = require('lib/logger.lua')
+local util = require('util.lua')
+local Logger = require('logger.lua')
 
-local SessionManger = require('lib/cryptnet/session.lua')
+local SessionManger = require('cryptnet/session.lua')
 
-local Message = require('lib/cryptnet/message.lua')
+local Message = require('cryptnet/message.lua')
 
-local KeyStore, Key = require('lib/cryptnet/key.lua')
+local KeyStore, Key = require('cryptnet/key.lua')
 
 local DEBUG_LEVEL = Logger.INFO
 

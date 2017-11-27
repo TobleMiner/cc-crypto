@@ -1,8 +1,8 @@
-local Logger = require('lib/logger.lua')
+local Logger = require('logger.lua')
 
 local DEBUG_LEVEL = Logger.INFO
 
-local util = require('lib/util.lua')
+local util = require('util.lua')
 
 require("lib/base64.lua")
 

@@ -1,4 +1,4 @@
-local util = require('lib/util.lua')
+local util = require('util.lua')
 
 local Queue = util.class()
 local Element = util.class()

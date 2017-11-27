@@ -1,5 +1,5 @@
-local util = require('lib/util.lua')
-local Logger = require('lib/logger.lua')
+local util = require('util.lua')
+local Logger = require('logger.lua')
 
 local KeyStore = util.class()
 local Key = util.class()
