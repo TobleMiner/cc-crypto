@@ -7,6 +7,31 @@ Cryptnet is a simple cryptography layer for computer craft modems. It uses AES-1
 
 ## Sending messages
 
+### Sender
+
+```lua
+-- Replacement for require
+os.loadAPI('util/include')
+
+local Cryptnet, KeyStore, Key = require('cryptnet.lua')
+
+-- Create key storage
+local keyStore = KeyStore.new()
+-- Create new shared key
+local key = Key.new('superSecretSharedKey')
+-- Add key to key storage
+keyStore:addKey(key)
+
+-- Create new cryptnet instance, arguments: <modem side>, <key store>
+local cryptnet = Cryptnet.new('back', keyStore)
+
+parallel.waitForAll(
+	-- Start cryptnet worker coroutine
+	function() cryptnet:run() end,
+	-- Send some messages, arguments: <message>, <recipient computer id>, <key>
+	function() cryptnet:send('Hello World', 1, key); cryptnet:send({ foo = 'bar', bar = 'foo' }, 1, key); cryptnet:send(true, 1, key) end)
+```
+
 ### Receiver
 
 ```lua
@@ -56,31 +81,6 @@ local cryptnet = Cryptnet.new('top', keyStore, function(msg) vardump(msg) end)
 
 -- Start cryptnet coroutine
 cryptnet:run()
-```
-
-### Sender
-
-```lua
--- Replacement for require
-os.loadAPI('util/include')
-
-local Cryptnet, KeyStore, Key = require('cryptnet.lua')
-
--- Create key storage
-local keyStore = KeyStore.new()
--- Create new shared key
-local key = Key.new('superSecretSharedKey')
--- Add key to key storage
-keyStore:addKey(key)
-
--- Create new cryptnet instance, arguments: <modem side>, <key store>
-local cryptnet = Cryptnet.new('back', keyStore)
-
-parallel.waitForAll(
-	-- Start cryptnet worker coroutine
-	function() cryptnet:run() end,
-	-- Send some messages, arguments: <message>, <recipient computer id>, <key>
-	function() cryptnet:send('Hello World', 1, key); cryptnet:send({ foo = 'bar', bar = 'foo' }, 1, key); cryptnet:send(true, 1, key) end)
 ```
 
 ## Ping
