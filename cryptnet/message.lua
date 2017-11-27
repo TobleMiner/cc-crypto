@@ -4,7 +4,6 @@ local DEBUG_LEVEL = Logger.INFO
 
 local util = require('lib/util.lua')
 
-local sha1 = require('lib/sha1.lua')
 local aeslua = require("/lib/aeslua.lua")
 require("lib/base64.lua")
 

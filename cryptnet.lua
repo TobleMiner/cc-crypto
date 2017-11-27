@@ -1,5 +1,7 @@
 os.loadAPI("util/include")
 
+sha1 = require('lib/sha1.lua')
+
 local util = require('lib/util.lua')
 local Logger = require('lib/logger.lua')
 

@@ -1,5 +1,4 @@
 local util = require('lib/util.lua')
-local sha1 = require('lib/sha1.lua')
 local Logger = require('lib/logger.lua')
 
 local KeyStore = util.class()
