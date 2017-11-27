@@ -17,11 +17,14 @@ function Callback:init(callback, ...)
 end
 
 function Callback:call(...)
-	if #self.args > 0 then
-		self.callback(table.unpack(self.args), ...)
-	else
-		self.callback(...)
-	end
+	local args = table.pack(...)
+	pcall(function()
+		if #self.args > 0 then
+			self.callback(table.unpack(self.args), table.unpack(args))
+		else
+			self.callback(table.unpack(args))
+		end
+	end)
 end
 
 local Cryptnet = util.class()
@@ -127,9 +130,13 @@ function Cryptnet:listen()
 		local event, side, chan, resp_chan, msg, dist = os.pullEvent('modem_message')
 		if side == self.side and chan == self.ownId then
 			self.logger:debug('Got message')
-			local message = Message.parse(self, msg)
-			if message then
-				self.sessionManger:handleMessage(message, resp_chan)
+			if not pcall(function()
+				local message = Message.parse(self, msg)
+				if message then
+					self.sessionManger:handleMessage(message, resp_chan)
+				end
+			end) then
+				self.logger.warn('Message handling failed')
 			end
 		else
 			os.queueEvent(event, side, chan, resp_chan, msg, dist)
