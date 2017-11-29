@@ -9,7 +9,7 @@ function Challenge:init(challenge)
 end
 
 function Challenge:inc()
-	if self.challenge == bit.blshift(1, CHALLENGE_LENGTH) - 1 then
+	if self.challenge == bit32.lshift(1, CHALLENGE_LENGTH) - 1 then
 		self.challenge = 0
 	else
 		self.challenge = self.challenge + 1

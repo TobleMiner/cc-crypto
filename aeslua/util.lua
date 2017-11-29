@@ -9,10 +9,10 @@ aeslua.util = public;
 -- calculate the parity of one byte
 --
 function public.byteParity(byte)
-    byte = bit.bxor(byte, bit.blogic_rshift(byte, 4));
-    byte = bit.bxor(byte, bit.blogic_rshift(byte, 2));
-    byte = bit.bxor(byte, bit.blogic_rshift(byte, 1));
-    return bit.band(byte, 1);
+    byte = bit32.bxor(byte, bit32.rshift(byte, 4));
+    byte = bit32.bxor(byte, bit32.rshift(byte, 2));
+    byte = bit32.bxor(byte, bit32.rshift(byte, 1));
+    return bit32.band(byte, 1);
 end
 
 -- 
@@ -20,9 +20,9 @@ end
 --
 function public.getByte(number, index)
     if (index == 0) then
-        return bit.band(number,0xff);
+        return bit32.band(number,0xff);
     else
-        return bit.band(bit.blogic_rshift(number, index*8),0xff);
+        return bit32.band(bit32.rshift(number, index*8),0xff);
     end
 end
 
@@ -32,9 +32,9 @@ end
 --
 function public.putByte(number, index)
     if (index == 0) then
-        return bit.band(number, 0xff);
+        return bit32.band(number, 0xff);
     else
-        return bit.blshift(bit.band(number,0xff),index*8);
+        return bit32.lshift(bit32.band(number,0xff),index*8);
     end
 end
 
@@ -147,7 +147,7 @@ end
 
 function public.xorIV(data, iv)
     for i = 1,16 do
-        data[i] = bit.bxor(data[i], iv[i]);
+        data[i] = bit32.bxor(data[i], iv[i]);
     end 
 end
 
