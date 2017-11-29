@@ -26,8 +26,6 @@ function TimerManager:run()
 			pcall(function()
 				callback:call()
 			end)
-		else
-			os.queueEvent(event, id)
 		end
 	end
 end
