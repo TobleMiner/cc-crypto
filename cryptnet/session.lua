@@ -4,6 +4,8 @@ local SESSION_TIMEOUT = 3000
 local MSG_TIMEOUT = 1000
 local MSG_RESEND_COUNT = 4
 
+local QUEUE_LIMIT = 10
+
 local Logger = require('logger.lua')
 
 local DEBUG_LEVEL = Logger.INFO
@@ -54,7 +56,7 @@ end
 
 function SessionManager:enqueueMessage(msg, recipient, key)
 	if not util.table_has(self.messageQueues, recipient) then
-		self.messageQueues[recipient] = QueueKeyPair.new(Queue.new(), key)
+		self.messageQueues[recipient] = QueueKeyPair.new(Queue.new(QUEUE_LIMIT), key)
 	end
 	self.messageQueues[recipient]:getQueue():enqueue(msg)
 	self:updateQueues()	
@@ -62,7 +64,7 @@ end
 
 function SessionManager:updateQueues()
 	for id,qkp in pairs(self.messageQueues) do
-		self.logger:debug('Tx queue length: ' .. qkp:getQueue():size())
+		self.logger:debug('Tx queue length: ' .. qkp:getQueue():length())
 		if not qkp:getQueue():isEmpty() then
 			local session = self:getSessionForPeer(id)
 			if not session then
