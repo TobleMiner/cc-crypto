@@ -23,7 +23,7 @@ end
 
 function Callback:call(...)
 	local args = table.pack(...)
-	pcall(function()
+	return pcall(function()
 		if #self.args > 0 then
 			self.callback(table.unpack(self.args), table.unpack(args))
 		else
@@ -151,7 +151,10 @@ end
 
 function Cryptnet:onRx(msg, remoteId)
 	if self.rxCallback then
-		self.rxCallback:call(msg, remoteId)
+		local success, err = self.rxCallback:call(msg, remoteId)
+		if not success then
+			self.logger:warn('Callback failed: ' .. err)
+		end
 	end
 end
 
