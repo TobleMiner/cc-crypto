@@ -88,35 +88,24 @@ local function bits_to_byte(a,b,c,d,e,f,g,h)
 end
 
 -- bitwise "and" function for 2 8bit number
-local band = cache2arg (function(a,b)
-  local A,B,C,D,E,F,G,H = byte_to_bits(b)
-  local a,b,c,d,e,f,g,h = byte_to_bits(a)
-  return bits_to_byte(
-    A and a, B and b, C and c, D and d,
-    E and e, F and f, G and g, H and h)
+local band = cache2arg(function(a,b)
+	return bit32.band(bit32.band(a, b), 0xFF)
 end)
+
 
 -- bitwise "or" function for 2 8bit numbers
 local bor = cache2arg(function(a,b)
-  local A,B,C,D,E,F,G,H = byte_to_bits(b)
-  local a,b,c,d,e,f,g,h = byte_to_bits(a)
-  return bits_to_byte(
-    A or a, B or b, C or c, D or d,
-    E or e, F or f, G or g, H or h)
+	return bit32.band(bit32.bor(a, b), 0xFF)
 end)
 
 -- bitwise "xor" function for 2 8bit numbers
 local bxor = cache2arg(function(a,b)
-  local A,B,C,D,E,F,G,H = byte_to_bits(b)
-  local a,b,c,d,e,f,g,h = byte_to_bits(a)
-  return bits_to_byte(
-    A ~= a, B ~= b, C ~= c, D ~= d,
-    E ~= e, F ~= f, G ~= g, H ~= h)
+	return bit32.band(bit32.bxor(a, b), 0xFF)
 end)
 
 -- bitwise complement for one 8bit number
 local function bnot(x)
-  return 255-(x % 256)
+	return bit32.band(bit32.bnot(x), 0xFF)
 end
 
 -- creates a function to combine to 32bit numbers using an 8bit combination function
@@ -129,34 +118,26 @@ local function w32_comb(fn)
 end
 
 -- create functions for and, xor and or, all for 2 32bit numbers
-local w32_and = w32_comb(band)
-local w32_xor = w32_comb(bxor)
-local w32_or = w32_comb(bor)
+local w32_and = bit32.band
+local w32_xor = bit32.bxor
+local w32_or = bit32.bor
 
 -- xor function that may receive a variable number of arguments
-local function w32_xor_n(a,...)
-  local aa,ab,ac,ad = w32_to_bytes(a)
-  for i=1,select('#',...) do
-    local ba,bb,bc,bd = w32_to_bytes(select(i,...))
-    aa,ab,ac,ad = bxor(aa,ba),bxor(ab,bb),bxor(ac,bc),bxor(ad,bd)
-  end
-  return bytes_to_w32(aa,ab,ac,ad)
+local function w32_xor_n(a, ...)
+	for i=1,select('#', ...) do
+		a = bit32.bxor(a, select(i, ...))
+	end
+	return a
 end
 
 -- combining 3 32bit numbers through binary "or" operation
 local function w32_or3(a,b,c)
-  local aa,ab,ac,ad = w32_to_bytes(a)
-  local ba,bb,bc,bd = w32_to_bytes(b)
-  local ca,cb,cc,cd = w32_to_bytes(c)
-  return bytes_to_w32(
-    bor(aa,bor(ba,ca)), bor(ab,bor(bb,cb)), bor(ac,bor(bc,cc)), bor(ad,bor(bd,cd))
-  )
+	return bit32.bor(a, bit32.bor(b, c))
 end
 
+
 -- binary complement for 32bit numbers
-local function w32_not(a)
-  return 4294967295-(a % 4294967296)
-end
+w32_not = bit32.bnot
 
 -- adding 2 32bit numbers, cutting off the remainder on 33th bit
 local function w32_add(a,b) return (a+b) % 4294967296 end
