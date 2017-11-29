@@ -168,19 +168,20 @@ function MessageData.getType()
 end
 
 function MessageData.getParams()
-	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'data'}
+	return {'type', 'id', 'id_recipient', 'id_a', 'id_b', 'hmac', 'iv', 'data'}
 end
 
 function MessageData:strHmac()
-	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.data) 
+	return self.type .. tostring(self.id) .. tostring(self.id_recipient) .. tostring(self.id_a) .. tostring(self.id_b) .. tostring(self.iv) .. tostring(self.data) 
 end
 
-function MessageData:encrypt(key, data)
-	self.data = base64_encode(aeslua.encrypt(key:getKey(), textutils.serialize(data), aeslua.AES128, aeslua.CBCMODE))
+function MessageData:encrypt(key, data, iv)
+	self.data = base64_encode(aeslua.encrypt(key:getKey(), textutils.serialize(data), aeslua.AES128, aeslua.CBCMODE, iv))
+	self.iv = iv
 end
 
 function MessageData:decrypt(key)
-	return textutils.unserialize(aeslua.decrypt(key:getKey(), base64_decode(self.data), aeslua.AES128, aeslua.CBCMODE))
+	return textutils.unserialize(aeslua.decrypt(key:getKey(), base64_decode(self.data), aeslua.AES128, aeslua.CBCMODE, self.iv))
 end
 
 

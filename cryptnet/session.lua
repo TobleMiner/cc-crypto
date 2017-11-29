@@ -264,7 +264,11 @@ function Session:notify()
 		
 		local data = MessageData.new()
 		self:setTxIds(data)
-		data:encrypt(self.key, message)
+		local iv = {}
+		for i=1,16 do
+			table.insert(iv, self.manager.random:uint8())
+		end
+		data:encrypt(self.key, message, iv)
 		self.logger:debug('Sign '..data:getType()..' '..tostring(self:getChallengeTx():get()))
 		data:setHmac(data:calcHmac(self:getKey(), self:getChallengeTx()))
 		
