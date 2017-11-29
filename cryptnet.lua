@@ -1,4 +1,4 @@
-os.loadAPI("util/include")
+os.loadAPI("lib/include")
 
 sha1 = require('sha1.lua')
 aeslua = require("aeslua.lua")
