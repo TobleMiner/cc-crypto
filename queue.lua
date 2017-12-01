@@ -40,6 +40,32 @@ function Queue:enqueue(val)
 	self.len = self.len + 1
 end
 
+function Queue:wakeUpWriters()
+	while not self:isFull() and #self.writers > 0 do
+		coroutine.resume(table.remove(self.writers, 1))
+	end
+end
+
+function Queue:remove(value)
+	local cursor = self.head:getNext()
+	while cursor ~= self.head do
+		if cursor:getValue() == value then
+			cursor:getNext():setPrev(cursor:getPrev())
+			cursor:getPrev():setNext(cursor:getNext())
+			-- Disconnect cursor
+			cursor:setNext(cursor)
+			cursor:setPrev(cursor)
+			self.len = self.len - 1
+
+			self:wakeUpWriters()
+
+			return true
+		end
+		cursor = cursor:getNext()
+	end
+	return false
+end
+
 function Queue:dequeue()
 	if self:isEmpty() then
 		return nil
@@ -54,9 +80,7 @@ function Queue:dequeue()
 	valHead:setPrev(valHead)
 	self.len = self.len - 1
 
-	while not self:isFull() and #self.writers > 0 do
-		coroutine.resume(table.remove(self.writers, 1))
-	end
+	self:wakeUpWriters()
 
 	return valHead:getValue()
 end
