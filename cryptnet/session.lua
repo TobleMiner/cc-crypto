@@ -1,8 +1,8 @@
 local MAX_NUM_SESSIONS = 1000
 
+local ASSOCIATION_TIMEOUT = 300
 local SESSION_TIMEOUT = 3000
 local MSG_TIMEOUT = 1000
-local MSG_RESEND_COUNT = 4
 
 local QUEUE_LIMIT = 10
 
@@ -32,6 +32,27 @@ function QueueKeyPair:getKey()
 	return self.key
 end
 
+
+local MessageTimeoutPair = util.class()
+
+function MessageTimeoutPair:init(msg, timeout)
+	self.msg = msg
+	self.timeout = timeout
+end
+
+function MessageTimeoutPair:getMessage()
+	return self.msg
+end
+
+function MessageTimeoutPair:getTimeout()
+	return self.timeout
+end
+
+function MessageTimeoutPair:setTimeout(timeout)
+	self.timeout = timeout
+end
+
+
 local SessionManager = util.class()
 local Session = util.class()
 
@@ -45,7 +66,7 @@ function SessionManager:init(cryptnet)
 	self.cryptnet = cryptnet
 	self.sessions = {}
 	self.logger = Logger.new('manager', DEBUG_LEVEL)
-	self.timer = Timer.new()
+	self.timer = Timer.new(self.onTimerError, self)
 	self.random = Random.new()
 	self.messageQueues = {}
 end
@@ -58,7 +79,19 @@ function SessionManager:enqueueMessage(msg, recipient, key)
 	if not util.table_has(self.messageQueues, recipient) then
 		self.messageQueues[recipient] = QueueKeyPair.new(Queue.new(QUEUE_LIMIT), key)
 	end
-	self.messageQueues[recipient]:getQueue():enqueue(msg)
+	local mtPair = MessageTimeoutPair.new(msg)
+	local timeout = self.timer:setTimeout(
+		function()
+			self.logger:debug('Message timed out')
+			local queue = self.messageQueues[recipient]
+			if queue then
+				if not queue:getQueue():remove(mtPair) then
+					self.logger:warn('Message timeouted but is not in queue. BUG?')
+				end
+			end
+		end, MSG_TIMEOUT)
+	mtPair:setTimeout(timeout)
+	self.messageQueues[recipient]:getQueue():enqueue(mtPair)
 	self:updateQueues()	
 end
 
@@ -184,13 +217,22 @@ function SessionManager:getTimer()
 	return self.timer
 end
 
+function SessionManager:onTimerError(id, err)
+	self.logger:warn(string.format("Timer %d failed: %s", id, err))
+end
+
 function SessionManager:dequeMessage(peerId)
 	if not util.table_has(self.messageQueues, peerId) then
 		return nil
 	end
 	
 	local qkp = self.messageQueues[peerId]	
-	return qkp:getQueue():dequeue()
+	local mtp = qkp:getQueue():dequeue()
+	if mtp then
+		self.timer:clearTimeout(mtp:getTimeout())
+		return mtp:getMessage()
+	end
+	return nil
 end
 
 
@@ -472,7 +514,11 @@ function Session:resetTerminationTimeout()
 	if self.timerTerminate then
 		timer:clearTimeout(self.timerTerminate)
 	end
-	self.timerTerminate = timer:setTimeout(self.terminate, SESSION_TIMEOUT, self)
+	if self.state < Session.state.ASSOCIATED then
+		self.timerTerminate = timer:setTimeout(self.terminate, ASSOCIATION_TIMEOUT, self)
+	else
+		self.timerTerminate = timer:setTimeout(self.terminate, SESSION_TIMEOUT, self)
+	end
 end
 
 function Session:kill()
